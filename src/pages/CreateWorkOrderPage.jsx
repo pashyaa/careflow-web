@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api/apiClient.js'
 import { ErrorState, LoadingState } from '../components/Feedback.jsx'
 import { useAsync } from '../hooks/useAsync.js'
+import { ROLES, useAuth } from '../auth/AuthContext.jsx'
 
 function defaultTarget() {
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -13,11 +14,15 @@ function defaultTarget() {
 export default function CreateWorkOrderPage() {
   const navigate = useNavigate()
   const { data: sites, loading, error, refetch } = useAsync(api.sites, [])
+      if (!hasRole(ROLES.PLANNER, ROLES.ADMIN)) {
+    return <Navigate to="/work-orders" replace />
+  }
   const [assets, setAssets] = useState([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', siteId: '', assetId: '', targetResolutionAt: defaultTarget() })
+  const { hasRole } = useAuth()
 
   function change(event) {
     const { name, value } = event.target

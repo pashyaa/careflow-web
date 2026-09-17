@@ -6,6 +6,7 @@ import PriorityBadge from '../components/PriorityBadge.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { formatDateTime, isOverdue } from '../utils/formatters.js'
+import { ROLES, useAuth } from '../auth/AuthContext.jsx'
 
 const initialFilters = { query: '', status: '', priority: '', page: 0, size: 10, sortBy: 'createdAt', direction: 'DESC' }
 
@@ -13,6 +14,8 @@ export default function WorkOrdersPage() {
   const [filters, setFilters] = useState(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState(initialFilters)
   const { data, loading, error, refetch } = useAsync(() => api.workOrders(appliedFilters), [appliedFilters])
+  const { hasRole } = useAuth()
+  const canCreate = hasRole(ROLES.PLANNER, ROLES.ADMIN)
 
   function updateFilter(event) {
     setFilters((current) => ({ ...current, [event.target.name]: event.target.value }))
@@ -38,7 +41,7 @@ export default function WorkOrdersPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div><p className="kicker">Service demand</p><h1>Work orders</h1><p>Search, triage, assign, and progress operational work across the service portfolio.</p></div>
-        <Link className="button primary" to="/work-orders/new"><span>＋</span> Raise work order</Link>
+        {canCreate && <Link className="button primary" to="/work-orders/new"><span>＋</span> Raise work order</Link>}
       </section>
 
       <form className="filter-bar" onSubmit={applyFilters}>

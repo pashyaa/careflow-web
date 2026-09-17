@@ -6,6 +6,7 @@ import PriorityBadge from '../components/PriorityBadge.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { formatDateTime, humanize, isOverdue } from '../utils/formatters.js'
+import { ROLES, useAuth } from '../auth/AuthContext.jsx'
 
 const transitions = {
   NEW: ['CANCELLED'],
@@ -18,11 +19,14 @@ const transitions = {
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams()
+  const { user, hasRole } = useAuth()
+  const canAssign = hasRole(ROLES.PLANNER, ROLES.ADMIN)
+  const canTransition = hasRole(ROLES.PLANNER, ROLES.TECHNICIAN, ROLES.ADMIN)
   const { data, loading, error, refetch } = useAsync(async () => {
     const [workOrder, history] = await Promise.all([api.workOrder(id), api.workOrderHistory(id)])
     return { workOrder, history }
   }, [id])
-  const { data: technicians } = useAsync(api.technicians, [])
+  const { data: technicians } = useAsync(canAssign ? api.technicians : () => Promise.resolve([]), [canAssign])
   const [technicianId, setTechnicianId] = useState('')
   const [nextStatus, setNextStatus] = useState('')
   const [note, setNote] = useState('')
@@ -33,7 +37,7 @@ export default function WorkOrderDetailPage() {
     if (!technicianId) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-      await api.assignTechnician(id, { technicianId, changedBy: 'Operations Planner' })
+     await api.assignTechnician(id, { technicianId, changedBy: user.email })
       setMutation({ loading: false, error: null, message: 'Technician assignment updated.' })
       await refetch()
     } catch (requestError) {
@@ -46,7 +50,7 @@ export default function WorkOrderDetailPage() {
     if (!nextStatus) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-      await api.transitionWorkOrder(id, { status: nextStatus, note, changedBy: 'Operations Planner' })
+     await api.transitionWorkOrder(id, { status: nextStatus, note, changedBy: user.email })
       setNextStatus('')
       setNote('')
       setMutation({ loading: false, error: null, message: 'Work order status updated.' })
@@ -81,9 +85,15 @@ export default function WorkOrderDetailPage() {
         </div>
 
         <aside className="detail-aside">
+          {canAssign && (
           <form className="panel action-card" onSubmit={assign}><p className="kicker">Dispatch</p><h2>Technician assignment</h2><p>Current: <strong>{workOrder.assignedTechnician?.name || 'Unassigned'}</strong></p><label><span>Select technician</span><select value={technicianId} onChange={(event) => setTechnicianId(event.target.value)}><option value="">Choose a technician</option>{technicians?.map((tech) => <option key={tech.id} value={tech.id}>{tech.label} · {tech.secondaryText}</option>)}</select></label><button className="button secondary full" disabled={!technicianId || mutation.loading}>Update assignment</button></form>
-
+          )}
+          {canTransition && (
           <form className="panel action-card" onSubmit={transition}><p className="kicker">Workflow</p><h2>Change status</h2>{allowedTransitions.length ? <><label><span>Next status</span><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}><option value="">Select allowed transition</option>{allowedTransitions.map((status) => <option key={status} value={status}>{humanize(status)}</option>)}</select></label><label><span>Transition note</span><textarea rows="4" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Diagnostics, blockers, or resolution evidence…" /></label><button className="button primary full" disabled={!nextStatus || mutation.loading}>Apply status</button></> : <p className="terminal-state">This work order is in a terminal state. Reopen support is planned in the backlog.</p>}</form>
+          )}
+          {!canAssign && !canTransition && (
+           <div className="panel action-card"><p className="kicker">Viewing only</p><p>Your account has read-only access to work orders.</p></div>
+            )}
         </aside>
       </section>
     </div>
