@@ -206,4 +206,10 @@ dd { margin: 0; color: #30494a; font-size: 12px; font-weight: 750; } dd span { d
   .form-panel { padding: 20px; }.sla-card { width: 100%; }.detail-list > div:nth-child(odd) { padding-right: 0; }
   .primary-nav { overflow-x: auto; }.nav-link { white-space: nowrap; }.nav-icon { display: none; }
 }
-
+.auth-shell { display: grid; place-items: center; min-height: 100vh; padding: 24px; background: var(--navy, #16302f); }
+.auth-card { width: 100%; max-width: 380px; padding: 34px 32px; display: grid; gap: 16px; }
+.auth-brand { padding: 0 0 6px; border: 0; }
+.auth-card h1 { margin: 0; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
+.auth-subtitle { margin: -8px 0 4px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.user-chip { position: relative; padding-right: 14px; }
+.user-chip .text-button { margin-left: 6px; }
