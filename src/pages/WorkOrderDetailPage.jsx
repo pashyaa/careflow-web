@@ -19,7 +19,7 @@ const transitions = {
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams()
-  const { user, hasRole } = useAuth()
+  const { hasRole } = useAuth()
   const canAssign = hasRole(ROLES.PLANNER, ROLES.ADMIN)
   const canTransition = hasRole(ROLES.PLANNER, ROLES.TECHNICIAN, ROLES.ADMIN)
   const { data, loading, error, refetch } = useAsync(async () => {
@@ -37,7 +37,8 @@ export default function WorkOrderDetailPage() {
     if (!technicianId) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-     await api.assignTechnician(id, { technicianId, changedBy: user.email })
+     // NEW
+      await api.assignTechnician(id, { technicianId })
       setMutation({ loading: false, error: null, message: 'Technician assignment updated.' })
       await refetch()
     } catch (requestError) {
@@ -50,7 +51,8 @@ export default function WorkOrderDetailPage() {
     if (!nextStatus) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-     await api.transitionWorkOrder(id, { status: nextStatus, note, changedBy: user.email })
+     // NEW
+      await api.transitionWorkOrder(id, { status: nextStatus, note })
       setNextStatus('')
       setNote('')
       setMutation({ loading: false, error: null, message: 'Work order status updated.' })
@@ -81,7 +83,7 @@ export default function WorkOrderDetailPage() {
         <div className="detail-main">
           <article className="panel detail-panel"><div className="panel-heading"><div><p className="kicker">Problem statement</p><h2>Service request</h2></div></div><p className="long-copy">{workOrder.description}</p><dl className="detail-list"><div><dt>Service site</dt><dd>{workOrder.site.name}<span>{workOrder.site.code} · {workOrder.site.city}</span></dd></div><div><dt>Affected asset</dt><dd>{workOrder.asset?.name || 'Site-level work'}<span>{workOrder.asset ? `${workOrder.asset.tag} · ${workOrder.asset.category}` : 'No specific asset selected'}</span></dd></div><div><dt>Created</dt><dd>{formatDateTime(workOrder.createdAt)}</dd></div><div><dt>Last updated</dt><dd>{formatDateTime(workOrder.updatedAt)}</dd></div></dl></article>
 
-          <article className="panel detail-panel"><div className="panel-heading"><div><p className="kicker">Audit trail</p><h2>Status timeline</h2></div></div><ol className="timeline">{history.map((entry) => <li key={entry.id}><i /><div><div><StatusBadge status={entry.toStatus} /><time>{formatDateTime(entry.changedAt)}</time></div><strong>{entry.fromStatus ? `${humanize(entry.fromStatus)} → ${humanize(entry.toStatus)}` : 'Work order created'}</strong><p>{entry.note || 'No transition note was recorded.'}</p><span>by {entry.changedBy}</span></div></li>)}</ol></article>
+          <article className="panel detail-panel"><div className="panel-heading"><div><p className="kicker">Audit trail</p><h2>Status timeline</h2></div></div><ol className="timeline">{history.map((entry) => <li key={entry.id}><i /><div><div><StatusBadge status={entry.toStatus} /><time>{formatDateTime(entry.changedAt)}</time></div><strong>{entry.fromStatus ? `${humanize(entry.fromStatus)} → ${humanize(entry.toStatus)}` : 'Work order created'}</strong><p>{entry.note || 'No transition note was recorded.'}</p><span>by {entry.changedByDisplayName}</span></div></li>)}</ol></article>
         </div>
 
         <aside className="detail-aside">
