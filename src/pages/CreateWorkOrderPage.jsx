@@ -13,16 +13,17 @@ function defaultTarget() {
 
 export default function CreateWorkOrderPage() {
   const navigate = useNavigate()
+  const { hasRole } = useAuth()
   const { data: sites, loading, error, refetch } = useAsync(api.sites, [])
-      if (!hasRole(ROLES.PLANNER, ROLES.ADMIN)) {
-    return <Navigate to="/work-orders" replace />
-  }
   const [assets, setAssets] = useState([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', siteId: '', assetId: '', targetResolutionAt: defaultTarget() })
-  const { hasRole } = useAuth()
+
+  if (!hasRole(ROLES.PLANNER, ROLES.ADMIN)) {
+    return <Navigate to="/work-orders" replace />
+  }
 
   function change(event) {
     const { name, value } = event.target
