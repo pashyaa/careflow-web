@@ -55,14 +55,15 @@ export function getToken() {
 async function request(path, options = {}) {
   const token = getToken()
   const isLoginRequest = path === '/auth/login'
+  const { headers: extraHeaders, ...fetchOptions } = options
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...fetchOptions,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
+      ...extraHeaders,
     },
-    ...options,
   })
 
   if (!response.ok) {
@@ -83,6 +84,10 @@ async function request(path, options = {}) {
 
   if (response.status === 204) return null
   return response.json()
+}
+
+export function isVersionConflict(error) {
+  return error?.status === 409 && error?.details?.code === 'VERSION_CONFLICT'
 }
 
 function queryString(params) {
@@ -111,11 +116,15 @@ export const api = {
   workOrder: (id) => request(`/work-orders/${id}`),
   workOrderHistory: (id) => request(`/work-orders/${id}/history`),
   createWorkOrder: (payload) => request('/work-orders', { method: 'POST', body: JSON.stringify(payload) }),
-  assignTechnician: (id, payload) => request(`/work-orders/${id}/assignment`, {
-    method: 'PATCH', body: JSON.stringify(payload),
+   assignTechnician: (id, payload, version) => request(`/work-orders/${id}/assignment`, {
+    method: 'PATCH',
+    headers: { 'If-Match': `"${version}"` },
+    body: JSON.stringify(payload),
   }),
-  transitionWorkOrder: (id, payload) => request(`/work-orders/${id}/status`, {
-    method: 'PATCH', body: JSON.stringify(payload),
+  transitionWorkOrder: (id, payload, version) => request(`/work-orders/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'If-Match': `"${version}"` },
+    body: JSON.stringify(payload),
   }),
   sites: () => request('/reference/sites'),
   assets: (siteId) => request(`/reference/assets${queryString({ siteId })}`),

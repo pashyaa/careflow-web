@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api } from '../api/apiClient.js'
+import { api, isVersionConflict } from '../api/apiClient.js'
 import { ErrorState, LoadingState } from '../components/Feedback.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
@@ -32,13 +32,13 @@ export default function WorkOrderDetailPage() {
   const [note, setNote] = useState('')
   const [mutation, setMutation] = useState({ loading: false, error: null, message: '' })
 
-  async function assign(event) {
+   async function assign(event) {
     event.preventDefault()
     if (!technicianId) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-     // NEW
-      await api.assignTechnician(id, { technicianId })
+      await api.assignTechnician(id, { technicianId }, data.workOrder.version)
+      setTechnicianId('')
       setMutation({ loading: false, error: null, message: 'Technician assignment updated.' })
       await refetch()
     } catch (requestError) {
@@ -51,8 +51,7 @@ export default function WorkOrderDetailPage() {
     if (!nextStatus) return
     setMutation({ loading: true, error: null, message: '' })
     try {
-     // NEW
-      await api.transitionWorkOrder(id, { status: nextStatus, note })
+      await api.transitionWorkOrder(id, { status: nextStatus, note }, data.workOrder.version)
       setNextStatus('')
       setNote('')
       setMutation({ loading: false, error: null, message: 'Work order status updated.' })
@@ -60,6 +59,12 @@ export default function WorkOrderDetailPage() {
     } catch (requestError) {
       setMutation({ loading: false, error: requestError, message: '' })
     }
+  }
+
+  async function refreshAfterConflict() {
+    setMutation({ loading: false, error: null, message: '' })
+    setNextStatus('')            // the allowed transitions may have changed
+    await refetch()
   }
 
   if (loading && !data) return <LoadingState message="Loading work order…" />
@@ -76,7 +81,18 @@ export default function WorkOrderDetailPage() {
         <div className={`sla-card ${isOverdue(workOrder) ? 'overdue' : ''}`}><span>{isOverdue(workOrder) ? 'SLA overdue' : 'Target resolution'}</span><strong>{formatDateTime(workOrder.targetResolutionAt)}</strong></div>
       </section>
 
-      {mutation.error && <div className="inline-error"><strong>Update failed.</strong><span>{mutation.error.message}</span></div>}
+            {mutation.error && isVersionConflict(mutation.error) && (
+        <div className="inline-error conflict-banner" role="alert">
+          <strong>This work order was updated by someone else.</strong>
+          <span>Refresh to see the latest status and assignment, then re-apply your change.</span>
+          <button type="button" className="button secondary" onClick={refreshAfterConflict}>
+            Refresh
+          </button>
+        </div>
+      )}
+      {mutation.error && !isVersionConflict(mutation.error) && (
+        <div className="inline-error"><strong>Update failed.</strong><span>{mutation.error.message}</span></div>
+      )}
       {mutation.message && <div className="inline-success">✓ {mutation.message}</div>}
 
       <section className="detail-grid">

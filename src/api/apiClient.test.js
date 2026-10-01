@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, api, getSession, onUnauthorized } from './apiClient.js'
+import { ApiError, api, getSession, isVersionConflict, onUnauthorized } from './apiClient.js'
 
 beforeEach(() => window.localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
@@ -15,6 +15,26 @@ describe('api client', () => {
       expect.any(Object),
     )
     expect(fetch.mock.calls[0][0]).not.toContain('query=')
+  })
+    it('sends If-Match with the version and keeps the auth header', async () => {
+    window.localStorage.setItem('careflow.session', JSON.stringify({ token: 't0k', email: 'a@b.c', roles: [] }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) }))
+
+    await api.assignTechnician('wo-1', { technicianId: 'tech-1' }, 4)
+
+    const headers = fetch.mock.calls[0][1].headers
+    expect(headers['If-Match']).toBe('"4"')
+    expect(headers.Authorization).toBe('Bearer t0k')
+    expect(headers['Content-Type']).toBe('application/json')
+  })
+
+  it('recognises a version conflict', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 409,
+      json: async () => ({ code: 'VERSION_CONFLICT', currentVersion: 5, detail: 'stale' }),
+    }))
+    const error = await api.transitionWorkOrder('x', { status: 'RESOLVED' }, 1).catch((e) => e)
+    expect(isVersionConflict(error)).toBe(true)
   })
 
   it('turns Problem Details responses into ApiError', async () => {
