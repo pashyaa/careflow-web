@@ -5,7 +5,8 @@ import { ErrorState, LoadingState } from '../components/Feedback.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import { useAsync } from '../hooks/useAsync.js'
-import { formatDateTime, humanize, isOverdue } from '../utils/formatters.js'
+import { formatDateTime, humanize } from '../utils/formatters.js'
+import SlaPanel from '../components/SlaPanel.jsx'
 import { ROLES, useAuth } from '../auth/AuthContext.jsx'
 
 const transitions = {
@@ -78,7 +79,7 @@ export default function WorkOrderDetailPage() {
       <Link className="back-link" to="/work-orders">← Back to work orders</Link>
       <section className="detail-header">
         <div><div className="detail-meta"><span>{workOrder.referenceNumber}</span><StatusBadge status={workOrder.status} /><PriorityBadge priority={workOrder.priority} /></div><h1>{workOrder.title}</h1><p>{workOrder.site.customerName} · {workOrder.site.name}</p></div>
-        <div className={`sla-card ${isOverdue(workOrder) ? 'overdue' : ''}`}><span>{isOverdue(workOrder) ? 'SLA overdue' : 'Target resolution'}</span><strong>{formatDateTime(workOrder.targetResolutionAt)}</strong></div>
+                <div className={`sla-card ${workOrder.sla?.overallState === 'BREACHED' ? 'overdue' : ''}`}><span>{workOrder.sla?.overallState === 'BREACHED' ? 'SLA breached' : 'Target resolution'}</span><strong>{formatDateTime(workOrder.targetResolutionAt, workOrder.sla?.timeZone || undefined)}</strong></div>
       </section>
 
             {mutation.error && isVersionConflict(mutation.error) && (
@@ -97,6 +98,7 @@ export default function WorkOrderDetailPage() {
 
       <section className="detail-grid">
         <div className="detail-main">
+                    <SlaPanel sla={workOrder.sla} />
           <article className="panel detail-panel"><div className="panel-heading"><div><p className="kicker">Problem statement</p><h2>Service request</h2></div></div><p className="long-copy">{workOrder.description}</p><dl className="detail-list"><div><dt>Service site</dt><dd>{workOrder.site.name}<span>{workOrder.site.code} · {workOrder.site.city}</span></dd></div><div><dt>Affected asset</dt><dd>{workOrder.asset?.name || 'Site-level work'}<span>{workOrder.asset ? `${workOrder.asset.tag} · ${workOrder.asset.category}` : 'No specific asset selected'}</span></dd></div><div><dt>Created</dt><dd>{formatDateTime(workOrder.createdAt)}</dd></div><div><dt>Last updated</dt><dd>{formatDateTime(workOrder.updatedAt)}</dd></div></dl></article>
 
           <article className="panel detail-panel"><div className="panel-heading"><div><p className="kicker">Audit trail</p><h2>Status timeline</h2></div></div><ol className="timeline">{history.map((entry) => <li key={entry.id}><i /><div><div><StatusBadge status={entry.toStatus} /><time>{formatDateTime(entry.changedAt)}</time></div><strong>{entry.fromStatus ? `${humanize(entry.fromStatus)} → ${humanize(entry.toStatus)}` : 'Work order created'}</strong><p>{entry.note || 'No transition note was recorded.'}</p><span>by {entry.changedByDisplayName}</span></div></li>)}</ol></article>

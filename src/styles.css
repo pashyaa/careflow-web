@@ -215,3 +215,18 @@ dd { margin: 0; color: #30494a; font-size: 12px; font-weight: 750; } dd span { d
 .auth-subtitle { margin: -8px 0 4px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .user-chip { position: relative; padding-right: 14px; }
 .user-chip .text-button { margin-left: 6px; }
+
+/* CF-106: SLA */
+.sla-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 9px; border-radius: 999px; color: #46595a; background: #edf0ee; font-size: 9px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.sla-on_track { color: #1a6660; background: #dcefeb; }
+.sla-at_risk { color: #8a5a12; background: #fbefd4; }
+.sla-breached { color: #9e3439; background: #f8e1df; }
+.sla-met { color: #39724f; background: #e0f0e5; }
+.sla-met_late { color: #8b5035; background: #f6e5dd; }
+.sla-not_tracked { color: #6c6265; background: #eee9ea; }
+.sla-preview { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border: 1px dashed #c9d6d3; border-radius: 10px; background: #f7faf8; }
+.sla-preview-label { color: #617474; font-size: 12px; font-weight: 700; }
+.sla-preview strong { color: var(--ink); font-size: 13px; }
+.sla-preview small { color: #7a8b89; font-size: 11px; line-height: 1.5; }
+.form-grid label.checkbox-row { display: flex; align-items: center; gap: 8px; }
+@media (min-width: 901px) { .metric-grid.sla-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

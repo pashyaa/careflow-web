@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { ROLES, useAuth } from '../auth/AuthContext.jsx'
 
 const navigation = [
+  { to: '/sla-policies', label: 'SLA policies', icon: '⏱' },
   { to: '/dashboard', label: 'Operations overview', icon: '◫' },
   { to: '/work-orders', label: 'Work orders', icon: '≡' },
 ]
@@ -27,7 +28,7 @@ export default function AppShell() {
   // Dashboard is planner/admin-only on the API (@PreAuthorize on DashboardController) —
   // hide the nav link for roles that would just get a 403 clicking it.
   const canSeeDashboard = hasRole(ROLES.PLANNER, ROLES.ADMIN)
-  const visibleNav = navigation.filter((item) => item.to !== '/dashboard' || canSeeDashboard)
+   const visibleNav = navigation.filter((item) => !['/dashboard', '/sla-policies'].includes(item.to) || canSeeDashboard)
 
   return (
     <div className="app-shell">

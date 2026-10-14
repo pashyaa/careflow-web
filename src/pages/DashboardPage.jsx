@@ -35,6 +35,10 @@ export default function DashboardPage() {
         <MetricCard label="Unassigned" value={summary.unassignedWorkOrders} note="Waiting for dispatch" tone="warn" />
         <MetricCard label="Critical priority" value={summary.criticalOpenWorkOrders} note="Open critical incidents" tone="danger" />
       </section>
+            <section className="metric-grid sla-metrics" aria-label="SLA metrics">
+        <MetricCard label="SLA at risk" value={summary.atRiskWorkOrders} note="75% of an SLA window already used" tone="warn" />
+        <MetricCard label="SLA breached" value={summary.breachedWorkOrders} note="Response or resolution deadline missed" tone="danger" />
+      </section>
 
       <section className="dashboard-grid">
         <article className="panel wide-panel">
