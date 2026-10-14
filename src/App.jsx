@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import WorkOrderDetailPage from './pages/WorkOrderDetailPage.jsx'
 import WorkOrdersPage from './pages/WorkOrdersPage.jsx'
+import SlaPoliciesPage from './pages/SlaPoliciesPage.jsx'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="work-orders" element={<WorkOrdersPage />} />
           <Route path="work-orders/new" element={<CreateWorkOrderPage />} />
           <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
+          <Route path="sla-policies" element={<SlaPoliciesPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

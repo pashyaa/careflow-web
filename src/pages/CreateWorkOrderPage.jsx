@@ -4,12 +4,7 @@ import { api } from '../api/apiClient.js'
 import { ErrorState, LoadingState } from '../components/Feedback.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { ROLES, useAuth } from '../auth/AuthContext.jsx'
-
-function defaultTarget() {
-  const date = new Date(Date.now() + 24 * 60 * 60 * 1000)
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
-  return date.toISOString().slice(0, 16)
-}
+import { formatDateTime, formatMinutes } from '../utils/formatters.js'
 
 export default function CreateWorkOrderPage() {
   const navigate = useNavigate()
@@ -19,7 +14,16 @@ export default function CreateWorkOrderPage() {
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-  const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', siteId: '', assetId: '', targetResolutionAt: defaultTarget() })
+  const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', siteId: '', assetId: '' })
+
+  // CF-106: the deadline is no longer typed in. Ask the API which policy would apply and when
+  // the deadlines fall (in the site's time zone) whenever site, asset or priority changes.
+  const { data: sla, loading: slaLoading, error: slaError } = useAsync(
+    () => (form.siteId
+      ? api.previewSla({ siteId: form.siteId, assetId: form.assetId, priority: form.priority })
+      : Promise.resolve(null)),
+    [form.siteId, form.assetId, form.priority],
+  )
 
   if (!hasRole(ROLES.PLANNER, ROLES.ADMIN)) {
     return <Navigate to="/work-orders" replace />
@@ -44,11 +48,7 @@ export default function CreateWorkOrderPage() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const created = await api.createWorkOrder({
-        ...form,
-        assetId: form.assetId || null,
-        targetResolutionAt: new Date(form.targetResolutionAt).toISOString(),
-      })
+      const created = await api.createWorkOrder({ ...form, assetId: form.assetId || null })
       navigate(`/work-orders/${created.id}`, { replace: true })
     } catch (requestError) {
       setSubmitError(requestError)
@@ -63,7 +63,7 @@ export default function CreateWorkOrderPage() {
   return (
     <div className="page-stack narrow-page">
       <section className="page-heading">
-        <div><p className="kicker">New request</p><h1>Raise a work order</h1><p>Capture a clear problem statement, service context, priority, and target resolution time.</p></div>
+        <div><p className="kicker">New request</p><h1>Raise a work order</h1><p>Capture a clear problem statement, service context, and priority. The service-level targets are calculated for you.</p></div>
         <Link className="button secondary" to="/work-orders">Cancel</Link>
       </section>
 
@@ -75,13 +75,26 @@ export default function CreateWorkOrderPage() {
         </div>
 
         <div className="form-divider" />
-        <div className="form-section"><span className="section-number">02</span><div><h2>Problem and service target</h2><p>Write enough detail for a technician to begin diagnosis without a clarification call.</p></div></div>
+        <div className="form-section"><span className="section-number">02</span><div><h2>Problem and priority</h2><p>Write enough detail for a technician to begin diagnosis without a clarification call.</p></div></div>
         <div className="form-grid">
           <label><span>Work order title *</span><input name="title" value={form.title} onChange={change} maxLength="180" required placeholder="Example: Chiller pressure alarm during peak load" /></label>
           <label><span>Description *</span><textarea name="description" value={form.description} onChange={change} maxLength="4000" rows="7" required placeholder="Observed symptoms, business impact, recent changes, safety conditions, and any diagnostic evidence…" /></label>
           <div className="form-grid two-columns">
             <label><span>Priority *</span><select name="priority" value={form.priority} onChange={change} required>{['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((priority) => <option key={priority}>{priority}</option>)}</select></label>
-            <label><span>Target resolution *</span><input name="targetResolutionAt" type="datetime-local" value={form.targetResolutionAt} onChange={change} required /></label>
+            <div className="sla-preview" aria-live="polite">
+              <span className="sla-preview-label">Service level (calculated)</span>
+              {!form.siteId && <small>Select a site to see the SLA that will apply.</small>}
+              {form.siteId && slaLoading && <small>Calculating…</small>}
+              {form.siteId && !slaLoading && slaError && <small className="overdue-text">{slaError.message}</small>}
+              {form.siteId && !slaLoading && sla && (
+                <>
+                  <strong>{sla.policyName}</strong>
+                  <small>Respond within {formatMinutes(sla.responseMinutes)} · resolve within {formatMinutes(sla.resolutionMinutes)} ({sla.businessHoursOnly ? 'business hours' : '24×7'})</small>
+                  <small>First response by {formatDateTime(sla.responseDueAt, sla.timeZone)}</small>
+                  <small>Resolution by {formatDateTime(sla.resolutionDueAt, sla.timeZone)}</small>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
