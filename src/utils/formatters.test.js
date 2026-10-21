@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateTime, formatMinutes, slaStateLabel } from './formatters.js'
+import { formatDateTime, formatMinutes, isOverdue, siteTimeZone, slaStateLabel } from './formatters.js'
 
 describe('formatMinutes', () => {
   it('formats minutes and hours', () => {
@@ -16,6 +16,34 @@ describe('slaStateLabel', () => {
     expect(slaStateLabel('AT_RISK')).toBe('At risk')
     expect(slaStateLabel('MET_LATE')).toBe('Met late')
     expect(slaStateLabel('nope')).toBe('—')
+  })
+})
+describe('site time zone display', () => {
+  const instant = '2026-10-09T12:00:00Z'
+
+  it('shows the same instant in IST and New York, regardless of browser zone', () => {
+    expect(formatDateTime(instant, 'Asia/Kolkata')).toMatch(/05:30/)               // 17:30 IST
+    expect(formatDateTime(instant, 'America/New_York')).toMatch(/08:00.*(GMT-4|EDT)/i)
+  })
+
+  it('prefers the SLA snapshot zone, then the site zone', () => {
+    expect(siteTimeZone({ sla: { timeZone: 'Asia/Kolkata' }, site: { timeZone: 'America/New_York' } })).toBe('Asia/Kolkata')
+    expect(siteTimeZone({ sla: null, site: { timeZone: 'America/New_York' } })).toBe('America/New_York')
+  })
+})
+
+describe('isOverdue', () => {
+  const future = new Date(Date.now() + 3600_000).toISOString()
+  const past = new Date(Date.now() - 3600_000).toISOString()
+
+  it('follows the API SLA state, not the browser clock', () => {
+    expect(isOverdue({ status: 'NEW', targetResolutionAt: future, sla: { resolutionState: 'BREACHED' } })).toBe(true)
+    expect(isOverdue({ status: 'NEW', targetResolutionAt: past, sla: { resolutionState: 'ON_TRACK' } })).toBe(false)
+  })
+
+  it('never flags resolved or cancelled work, and falls back for legacy rows', () => {
+    expect(isOverdue({ status: 'RESOLVED', targetResolutionAt: past, sla: { resolutionState: 'BREACHED' } })).toBe(false)
+    expect(isOverdue({ status: 'NEW', targetResolutionAt: past, sla: null })).toBe(true)
   })
 })
 
