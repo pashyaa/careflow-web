@@ -29,8 +29,16 @@ export function humanize(value) {
   return value.toLowerCase().split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ')
 }
 
+// The zone a work order's deadlines are calculated in: the SLA snapshot first, then the site.
+export function siteTimeZone(workOrder) {
+  return workOrder.sla?.timeZone || workOrder.site?.timeZone || undefined
+}
+
+// Overdue is decided by the API (server clock). The browser clock is only a fallback
+// for legacy work orders that have no SLA snapshot.
 export function isOverdue(workOrder) {
-  return !['RESOLVED', 'CANCELLED'].includes(workOrder.status)
-    && new Date(workOrder.targetResolutionAt).getTime() < Date.now()
+  if (['RESOLVED', 'CANCELLED'].includes(workOrder.status)) return false
+  if (workOrder.sla?.resolutionState) return workOrder.sla.resolutionState === 'BREACHED'
+  return new Date(workOrder.targetResolutionAt).getTime() < Date.now()
 }
 
