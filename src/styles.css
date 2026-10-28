@@ -230,3 +230,6 @@ dd { margin: 0; color: #30494a; font-size: 12px; font-weight: 750; } dd span { d
 .sla-preview small { color: #7a8b89; font-size: 11px; line-height: 1.5; }
 .form-grid label.checkbox-row { display: flex; align-items: center; gap: 8px; }
 @media (min-width: 901px) { .metric-grid.sla-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field-error { display: block; margin-top: 4px; color: #8e353a; font-size: 12px; }
+input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: #c95a61; }
+.timeline .timeline-reason { margin: 4px 0 0; color: #2f5d5a; font-size: 12px; font-weight: 700; }

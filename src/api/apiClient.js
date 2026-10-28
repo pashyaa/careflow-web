@@ -129,6 +129,7 @@ export const api = {
   sites: () => request('/reference/sites'),
   assets: (siteId) => request(`/reference/assets${queryString({ siteId })}`),
   technicians: () => request('/reference/technicians'),
+    reasonCodes: (status) => request(`/reference/reason-codes${queryString({ status })}`),
     slaPolicies: () => request('/sla-policies'),
   createSlaPolicy: (payload) => request('/sla-policies', { method: 'POST', body: JSON.stringify(payload) }),
   updateSlaPolicy: (id, payload) => request(`/sla-policies/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
