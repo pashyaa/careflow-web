@@ -28,6 +28,15 @@ describe('api client', () => {
     expect(headers['Content-Type']).toBe('application/json')
   })
 
+  it('passes an AbortSignal through to fetch for work-order list requests', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ content: [] }) }))
+  const controller = new AbortController()
+
+  await api.workOrders({ status: 'NEW' }, { signal: controller.signal })
+
+  expect(fetch.mock.calls[0][1].signal).toBe(controller.signal)
+})
+
   it('recognises a version conflict', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false, status: 409,

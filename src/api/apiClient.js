@@ -112,7 +112,7 @@ export const api = {
   logout: () => writeSession(null),
 
   dashboard: () => request('/dashboard/summary'),
-  workOrders: (filters = {}) => request(`/work-orders${queryString(filters)}`),
+  workOrders: (filters = {}, { signal } = {}) => request(`/work-orders${queryString(filters)}`, { signal }),
   workOrder: (id) => request(`/work-orders/${id}`),
   workOrderHistory: (id) => request(`/work-orders/${id}/history`),
   createWorkOrder: (payload) => request('/work-orders', { method: 'POST', body: JSON.stringify(payload) }),

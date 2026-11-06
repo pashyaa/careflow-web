@@ -1,10 +1,11 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { apiUrl, queryWorkOrders } from '../test/msw/data.js'
 import { problem } from '../test/msw/handlers.js'
 import { server } from '../test/msw/server.js'
 import { renderApp } from '../test/renderApp.jsx'
+
 
 function bodyRows() {
   const [, ...rows] = within(screen.getByRole('table')).getAllByRole('row')
@@ -30,6 +31,41 @@ describe('Work orders list (MSW)', () => {
     expect(bodyRows()).toHaveLength(10)
     expect(screen.getByRole('link', { name: 'WO-1001' })).toHaveAttribute('href', '/work-orders/wo-1')
   })
+
+  it('ignores a slower earlier response that arrives after a newer one (BUG-301)', async () => {
+  const newOrders = queryWorkOrders(new URLSearchParams({ status: 'NEW' }))
+  const resolvedOrders = queryWorkOrders(new URLSearchParams({ status: 'RESOLVED' }))
+  expect(newOrders.totalElements).not.toBe(resolvedOrders.totalElements) // headings must be distinguishable
+
+  let releaseNew
+  const newGate = new Promise((resolve) => { releaseNew = resolve })
+  server.use(http.get(apiUrl('/work-orders'), async ({ request }) => {
+    const params = new URL(request.url).searchParams
+    if (params.get('status') === 'NEW') await newGate // NEW is held back until after RESOLVED has answered
+    return HttpResponse.json(queryWorkOrders(params))
+  }))
+
+  const { user } = renderApp('/work-orders')
+  await screen.findByRole('table')
+
+  await user.selectOptions(screen.getByLabelText('Status'), 'NEW')
+  await user.click(screen.getByRole('button', { name: 'Apply' }))
+  await user.selectOptions(screen.getByLabelText('Status'), 'RESOLVED')
+  await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+  const resolvedHeading = `${resolvedOrders.totalElements} work orders`
+  expect(await screen.findByRole('heading', { name: resolvedHeading })).toBeInTheDocument()
+
+  // Now the stale NEW response finally "arrives" and must be discarded.
+  await act(async () => {
+    releaseNew()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  })
+
+  expect(screen.getByRole('heading', { name: resolvedHeading })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: `${newOrders.totalElements} work orders` })).not.toBeInTheDocument()
+  expect(bodyRows()).toHaveLength(resolvedOrders.content.length)
+})
 
   it('sends the chosen filters to the API and shows only matching rows', async () => {
     const seen = []

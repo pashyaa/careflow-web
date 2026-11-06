@@ -13,7 +13,7 @@ const initialFilters = { query: '', status: '', priority: '', page: 0, size: 10,
 export default function WorkOrdersPage() {
   const [filters, setFilters] = useState(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState(initialFilters)
-  const { data, loading, error, refetch } = useAsync(() => api.workOrders(appliedFilters), [appliedFilters])
+  const { data, loading, error, refetch } = useAsync(({ signal }) => api.workOrders(appliedFilters, { signal }), [appliedFilters])
   const { hasRole } = useAuth()
   const canCreate = hasRole(ROLES.PLANNER, ROLES.ADMIN)
 
