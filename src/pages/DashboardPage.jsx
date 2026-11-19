@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { api } from '../api/apiClient.js'
+import { useDashboardData } from '../hooks/useDashboardData.js'
 import { EmptyState, ErrorState, LoadingState } from '../components/Feedback.jsx'
 import MetricCard from '../components/MetricCard.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
@@ -8,16 +8,10 @@ import { useAsync } from '../hooks/useAsync.js'
 import { formatDateTime, humanize, isOverdue } from '../utils/formatters.js'
 
 export default function DashboardPage() {
-  const { data, loading, error, refetch } = useAsync(async () => {
-    const [summary, recent] = await Promise.all([
-      api.dashboard(),
-      api.workOrders({ page: 0, size: 6, sortBy: 'createdAt', direction: 'DESC' }),
-    ])
-    return { summary, recent }
-  }, [])
+   const { data, loading, refreshing, error, refetch } = useDashboardData()
 
   if (loading && !data) return <LoadingState />
-  if (error) return <ErrorState error={error} onRetry={refetch} />
+  if (error && !data) return <ErrorState error={error} onRetry={refetch} />
 
   const { summary, recent } = data
   const statusTotal = Object.values(summary.statusBreakdown).reduce((sum, count) => sum + count, 0) || 1
@@ -28,6 +22,14 @@ export default function DashboardPage() {
         <div><p className="kicker">Live portfolio</p><h1>Operations overview</h1><p>Monitor work demand, service risk, and dispatch readiness across customer sites.</p></div>
         <Link className="button primary" to="/work-orders/new"><span>＋</span> Raise work order</Link>
       </section>
+
+            {error && (
+        <div className="inline-error" role="alert">
+          <strong>Could not refresh the dashboard.</strong>
+          <span>Showing the last numbers that loaded.</span>
+          <button type="button" className="text-button" onClick={refetch}>Try again</button>
+        </div>
+      )}
 
       <section className="metric-grid" aria-label="Work order metrics">
         <MetricCard label="Open work orders" value={summary.openWorkOrders} note="Across all active sites" />
@@ -73,7 +75,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <p className="panel-note">Snapshot generated {formatDateTime(summary.generatedAt)}</p>
+         <p className="panel-note">Snapshot generated {formatDateTime(summary.generatedAt)}{refreshing && ' · Refreshing…'}</p>
         </article>
       </section>
     </div>

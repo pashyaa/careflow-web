@@ -1,3 +1,4 @@
+import { clearDashboardCache, invalidateDashboard } from './dashboardCache.js'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 const TOKEN_STORAGE_KEY = 'careflow.session'
 
@@ -25,6 +26,7 @@ function readSession() {
 }
 
 function writeSession(session) {
+  clearDashboardCache()
   if (session) {
     window.localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(session))
   } else {
@@ -85,6 +87,13 @@ async function request(path, options = {}) {
   if (response.status === 204) return null
   return response.json()
 }
+// Runs a write request and, only once it has succeeded, marks the dashboard snapshot stale.
+// request() throws on any non-2xx response, so a failed or conflicting write never gets here.
+async function mutate(path, options) {
+  const result = await request(path, options)
+  invalidateDashboard()
+  return result
+}
 
 export function isVersionConflict(error) {
   return error?.status === 409 && error?.details?.code === 'VERSION_CONFLICT'
@@ -115,13 +124,13 @@ export const api = {
   workOrders: (filters = {}, { signal } = {}) => request(`/work-orders${queryString(filters)}`, { signal }),
   workOrder: (id) => request(`/work-orders/${id}`),
   workOrderHistory: (id) => request(`/work-orders/${id}/history`),
-  createWorkOrder: (payload) => request('/work-orders', { method: 'POST', body: JSON.stringify(payload) }),
-   assignTechnician: (id, payload, version) => request(`/work-orders/${id}/assignment`, {
+  createWorkOrder: (payload) => mutate('/work-orders', { method: 'POST', body: JSON.stringify(payload) }),
+   assignTechnician: (id, payload, version) => mutate(`/work-orders/${id}/assignment`, {
     method: 'PATCH',
     headers: { 'If-Match': `"${version}"` },
     body: JSON.stringify(payload),
   }),
-  transitionWorkOrder: (id, payload, version) => request(`/work-orders/${id}/status`, {
+  transitionWorkOrder: (id, payload, version) =>mutate(`/work-orders/${id}/status`, {
     method: 'PATCH',
     headers: { 'If-Match': `"${version}"` },
     body: JSON.stringify(payload),
